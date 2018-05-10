@@ -16,7 +16,6 @@ namespace Nethereum.BlockchainStore.Processing.Console
   public class StorageProcessor
   {
     private const int MaxRetries = 3;
-    private readonly CloudTable _contractTable;
     private readonly Web3.Web3 _web3;
     private readonly IBlockProcessor _procesor;
     private int _retryNumber;
@@ -58,6 +57,7 @@ namespace Nethereum.BlockchainStore.Processing.Console
       await Init();
       Stopwatch stopwatch = new Stopwatch();
       while (startBlock <= endBlock)
+      {
         try
         {
           stopwatch.Reset();
@@ -98,7 +98,7 @@ namespace Nethereum.BlockchainStore.Processing.Console
             }
           }
         }
-
+      }
       return true;
     }
   }

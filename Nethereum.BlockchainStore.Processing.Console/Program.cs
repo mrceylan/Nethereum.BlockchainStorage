@@ -7,18 +7,10 @@ namespace Nethereum.BlockchainStore.Processing.Console
   {
     private static void Main(string[] args)
     {
-      //string url = "http://localhost:8045";
-      //int start = 500599;
-      //int end = 1000000;
-      //bool postVm = true;
-
-      var url = "https://ropsten.infura.io/2riHiBOAVSxHOkL6DfLi";
+      
+      var url = System.Configuration.ConfigurationManager.AppSettings["web3url"];
       var start = Convert.ToInt32(args[1]);
       var end = Convert.ToInt32(args[2]);
-      //var postVm = false;
-      //if (args.Length > 3)
-      //  if (args[3].ToLower() == "postvm")
-      //    postVm = true;
 
       var proc = new StorageProcessor(url);
       proc.Init().Wait();
