@@ -11,16 +11,14 @@ namespace Nethereum.BlockchainStore.Processors.Transactions
         private readonly Web3.Web3 _web3;
         private readonly IContractRepository _contractRepository;
         private readonly ITransactionRepository _transactionRepository;
-        private readonly IAddressTransactionRepository _addressTransactionRepository;
 
 
         public ContractCreationTransactionProcessor(
-          Web3.Web3 web3, IContractRepository contractRepository, ITransactionRepository transactionRepository, IAddressTransactionRepository addressTransactionRepository)
+          Web3.Web3 web3, IContractRepository contractRepository, ITransactionRepository transactionRepository)
         {
             _web3 = web3;
             _contractRepository = contractRepository;
             _transactionRepository = transactionRepository;
-            _addressTransactionRepository = addressTransactionRepository;
         }
 
         public async Task ProcessTransactionAsync(Transaction transaction, TransactionReceipt transactionReceipt, HexBigInteger blockTimestamp)
@@ -38,10 +36,6 @@ namespace Nethereum.BlockchainStore.Processors.Transactions
                 transaction, transactionReceipt,
                 failedCreatingContract, blockTimestamp);
 
-            await _addressTransactionRepository.UpsertAsync(
-                transaction,
-                transactionReceipt,
-                failedCreatingContract, blockTimestamp, null, null, false, contractAddress);
         }
 
         public async Task<string> GetCode(string contractAddres)

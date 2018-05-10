@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Nethereum.Hex.HexTypes;
 using Nethereum.RPC.Eth.DTOs;
 
@@ -12,5 +13,9 @@ namespace Nethereum.BlockchainStore.Repositories
             TransactionReceipt transactionReceipt,
             bool failed,
             HexBigInteger timeStamp, bool hasVmStack = false, string error = null);
-    }
+
+    List<dynamic> TransactionList { get; set; }
+
+    Task AddTransactions();
+  }
 }
