@@ -3,16 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27428.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethereum.BlockchainStore", "Nethereum.BlockchainStore\Nethereum.BlockchainStore.csproj", "{63EE26BD-D2AF-465D-A2C3-749B57C34493}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethereum.BlockchainStore.Processing.Console", "Nethereum.BlockchainStore.Processing.Console\Nethereum.BlockchainStore.Processing.Console.csproj", "{2217951E-8662-4319-9298-F26EDD78A5C8}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9CDE4559-4CD2-4495-A620-0A251AC3712D}"
 	ProjectSection(SolutionItems) = preProject
 		Entities.png = Entities.png
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethereum.BlockchainStore.SQL", "Nethereum.BlockchainStore.SQL\Nethereum.BlockchainStore.SQL.csproj", "{B89E460E-AAA8-428C-A744-8B09833BE899}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nethereum.BlockChainStore.Data", "Nethereum.BlockChainStore.Data\Nethereum.BlockChainStore.Data.csproj", "{B091EF9B-4274-48F0-92C3-BFB87A22AF70}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nethereum.BlockChainStore.Core", "Nethereum.BlockChainStore.Core\Nethereum.BlockChainStore.Core.csproj", "{2A1BC756-0BC1-4A31-A778-578957BE2070}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,18 +18,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{63EE26BD-D2AF-465D-A2C3-749B57C34493}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{63EE26BD-D2AF-465D-A2C3-749B57C34493}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{63EE26BD-D2AF-465D-A2C3-749B57C34493}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{63EE26BD-D2AF-465D-A2C3-749B57C34493}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2217951E-8662-4319-9298-F26EDD78A5C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2217951E-8662-4319-9298-F26EDD78A5C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2217951E-8662-4319-9298-F26EDD78A5C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2217951E-8662-4319-9298-F26EDD78A5C8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B89E460E-AAA8-428C-A744-8B09833BE899}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B89E460E-AAA8-428C-A744-8B09833BE899}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B89E460E-AAA8-428C-A744-8B09833BE899}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B89E460E-AAA8-428C-A744-8B09833BE899}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B091EF9B-4274-48F0-92C3-BFB87A22AF70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B091EF9B-4274-48F0-92C3-BFB87A22AF70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B091EF9B-4274-48F0-92C3-BFB87A22AF70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B091EF9B-4274-48F0-92C3-BFB87A22AF70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A1BC756-0BC1-4A31-A778-578957BE2070}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A1BC756-0BC1-4A31-A778-578957BE2070}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A1BC756-0BC1-4A31-A778-578957BE2070}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A1BC756-0BC1-4A31-A778-578957BE2070}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
