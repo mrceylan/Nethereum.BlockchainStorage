@@ -26,23 +26,25 @@ namespace Nethereum.BlockChainStore.Data.Processors
 
     public async Task<bool> ExecuteAsync()
     {
-
-      var startBlock = repositoryBase.GetRepository<NodeBlock>().GetAll().Max(x => x.BlockNumber);
+      var blocks = repositoryBase.GetRepository<NodeBlock>().GetAll();
+      int startBlock = 5623328;
+      if (blocks.Count() > 0)
+        startBlock = blocks.Max(x => x.BlockNumber);
       var latestblock = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
-      new Helpers().AddLog(LogType.Info, $"DBdeki Son Blok : {startBlock} , Ağdaki Son Blok : {latestblock.Value}");
+      new Helpers().AddLog(LogType.Info, $"Last Block in DB : {startBlock} , Last Block in Network : {latestblock.Value}");
       var endBlock = (int)latestblock.Value;
 
       while (startBlock <= endBlock)
       {
         try
         {
-          new Helpers().AddLog(LogType.Process, $"Blok-{startBlock} İşleme Alınıyor..");
+          new Helpers().AddLog(LogType.Process, $"Block-{startBlock} Processing");
           var block = await blockProcessor.ProcessBlockAsync(startBlock);
-          new Helpers().AddLog(LogType.Success, $"Blok-{startBlock} İşleme Alındı..");
+          new Helpers().AddLog(LogType.Success, $"Block-{startBlock} Processed");
 
-          new Helpers().AddLog(LogType.Info, $"Blok-{startBlock} Transactionlar İşleme Alınıyor, Tx Count : {block.TransactionHashes.Length} ..");
+          new Helpers().AddLog(LogType.Info, $"Block-{startBlock} Transactions Processing, Tx Count : {block.TransactionHashes.Length} ..");
           await transactionsProcessor.ProcessTransactionAsync(block);
-          new Helpers().AddLog(LogType.Success, $"Blok-{startBlock} Transactionlar İşleme Alındı...");
+          new Helpers().AddLog(LogType.Success, $"Block-{startBlock} Transactions Processed");
         }
         catch (Exception e)
         {

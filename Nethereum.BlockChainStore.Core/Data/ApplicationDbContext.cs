@@ -17,7 +17,7 @@ namespace OpsICO.Core.Data
         }
         public DbSet<NodeBlock> NodeBlock { get; set; }
         public DbSet<NodeTransaction> NodeTransaction { get; set; }
-        public DbSet<NodeTransactionDetail> NodeTransactionDetail { get; set; }
+        public DbSet<NodeTokenTransfer> NodeTokenTransfer { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

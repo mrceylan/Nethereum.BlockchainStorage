@@ -46,7 +46,7 @@ namespace Nethereum.BlockChainStore.Data.Processors
       }
       catch (Exception e)
       {
-        new Helpers().AddLog(LogType.Failure, $"Blok-{blockNumber} Data Çekme Hatası => " + e.InnerException);
+        new Helpers().AddLog(LogType.Failure, $"Block-{blockNumber} Read Error => " + e.InnerException);
         return null;
       }
     }
@@ -58,16 +58,17 @@ namespace Nethereum.BlockChainStore.Data.Processors
 
         var isblock = blockRepository.Get(x => x.BlockNumber == (int)block.Number.Value).FirstOrDefault();
 
-        if (isblock != null) //blok içerde zaten varsa atlıyoruz
+        if (isblock != null) //block has already in DB
           return;
 
         var _nodeBlock = new NodeBlock()
         {
           BlockNumber = (int)block.Number.Value,
           BlockTime = new Helpers().UnixTimeStampToDateTime((double)block.Timestamp.Value),
-          Hash = block.BlockHash,
+          BlockHash = block.BlockHash,
           ParentHash = block.ParentHash,
-          TransactionCount = block.TransactionHashes.Length
+          TransactionCount = block.TransactionHashes.Length,
+          Nonce = block.Nonce,
         };
 
         blockRepository.Add(_nodeBlock);
@@ -76,7 +77,7 @@ namespace Nethereum.BlockChainStore.Data.Processors
       catch (Exception e)
       {
 
-        new Helpers().AddLog(LogType.Failure, $"Blok-{block.Number.Value} DB Yazma Hatası => " + e.InnerException);
+        new Helpers().AddLog(LogType.Failure, $"Block-{block.Number.Value} DB Write Error => " + e.InnerException);
       }
     }
 

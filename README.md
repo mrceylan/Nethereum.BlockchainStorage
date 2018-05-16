@@ -1,99 +1,109 @@
-# Nethereum Blockchain Store
+# Nethereum Blockchain Store SQL
 
-The Nethereum blockhain store is a library that allows the retrieving and storage of the Ethereum Blockchain by connecting a Node using RPC.
+The Nethereum blockhain store is a library that allows the retrieving and storage of the Ethereum Blockchain by connecting a Node using RPC and Nethereum.
 
-The current implementation processes and stores Blocks, Transactions, Logs, Contracts and the VM Stack.
+The current implementation processes and stores Blocks, Transactions and Token Transfers.
 
-The VM is specific for Geth, so if connecting to another implementation the VM will need to be disabled.
-
-Storage is implemented in Azure table storage, allowing for a simple (and cheap) way to store the data. 
-The Azure table storage can be easily replaced with other implementations like Azure Sql if needed. All the repositories are abstracted through interfaces providing easy replacement.
+All data will be written to SQL tables. If you want to personalize data or to know how to decode token transfer events you can use this library.
 
 ## Entities
 ![Entities](Entities.png)
 
-## Sample of Console processor
+## Core Library
 
-The console processor sample demonstrates how to process a range of blocks and initialisation of the library with the azure repository.
+It uses code-first technique to create entities and SQL tables. There are three tables for data; 
+NodeBlock for ethereum block data
+NodeTransactions for ethereum transactions
+NodeTokenTransfer for token transfers 
 
-### Initialisation of the different components
+## Console processor
 
-#### Table setup 
+The console processor sample demonstrates how to process a range of blocks.
 
-To simplify the setup of the Azure tables a generic bootstrapper allows to create the connection and validates the existance of the different tables.
-Tables have been assigned generic names (Transactions, Blocks, Contracts, TransactionsLog, AdressTransactions, TransactionsVmStack), each one of them can be prefixed with an environment i.e. "Morden" to allow multiple blockchains in an storage account.
+### Initialisation of the components
+
+#### DBContext Setup 
 
 ```csharp
-var tableSetup = new CloudTableSetup(connectionString);
-
-_contractTable = tableSetup.GetContractsTable(prefix);
-var transactionsTable = tableSetup.GetTransactionsTable(prefix);
-var addressTransactionsTable = tableSetup.GetAddressTransactionsTable(prefix);
-var blocksTable = tableSetup.GetBlocksTable(prefix);
-var logTable = tableSetup.GetTransactionsLogTable(prefix);
-var vmStackTable = tableSetup.GetTransactionsVmStackTable(prefix);
+private static void ConfigureServices(IServiceCollection services)
+{
+    var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
+    optionsBuilder.UseSqlServer(@"Server=localhost; Database=BlockchainStore;Integrated Security=True;");
+    ApplicationDbContext con = new ApplicationDbContext(optionsBuilder.Options);
+    unitOfWork = new UnitOfWork(con);
+}
 ```
 
-### Repository setup
-The repositories provides the wrapper access to the azure tables.
+### Block Processing
+When console app starts, it finds the latest blocknumber in DB and latestblocknumber in network using web3. If there is no block data, it starts from block number which you can specify. 
 
 ```csharp
-var blockRepository = new BlockRepository(blocksTable);
-var transactionRepository = new TransactionRepository(transactionsTable);
-var addressTransactionRepository = new AddressTransactionRepository(addressTransactionsTable);
-var contractRepository = new ContractRepository(_contractTable);
-var logRepository = new TransactionLogRepository(logTable);
-var vmStackRepository = new TransactionVMStackRepository(vmStackTable);
+ var blocks = repositoryBase.GetRepository<NodeBlock>().GetAll();
+ int startBlock = 5623328;
+ if (blocks.Count() > 0)
+   startBlock = blocks.Max(x => x.BlockNumber);
+ var latestblock = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
+ new Helpers().AddLog(LogType.Info, $"Last Block in DB : {startBlock} , Last Block in Network : {latestblock.Value}");
+ var endBlock = (int)latestblock.Value;
+
+ while (startBlock <= endBlock)
+ {
+   try
+   {
+     new Helpers().AddLog(LogType.Process, $"Block-{startBlock} Processing");
+     var block = await blockProcessor.ProcessBlockAsync(startBlock);
+     new Helpers().AddLog(LogType.Success, $"Block-{startBlock} Processed");
+
+     new Helpers().AddLog(LogType.Info, $"Block-{startBlock} Transactions Processing, Tx Count : {block.TransactionHashes.Length} ..");
+     await transactionsProcessor.ProcessTransactionAsync(block);
+     new Helpers().AddLog(LogType.Success, $"Block-{startBlock} Transactions Processed");
+   }
+   catch (Exception e)
+   {
+	 }
+   startBlock++;
+ }
 ```
 
-### Transaction Processors
-Ethereum can be divided on three types of transactions, contract creation, value transfer and contract specific transaction (which can also include a value transfer)
-
-Each one of these types has different ways needs for identification, processing and storage, so there abstracted as and initialised as follows:
+### Transaction Processing
+After block processing,it uses this block for getting transaction hashes, and for every hash in this block, it gets transaction details from network using Nethereum.
 
 ```csharp
-var contractTransactionProcessor = new ContractTransactionProcessor(_web3, contractRepository,
-                transactionRepository, addressTransactionRepository, vmStackRepository, logRepository);
-var contractCreationTransactionProcessor = new ContractCreationTransactionProcessor(_web3, contractRepository,
-                transactionRepository, addressTransactionRepository);
-var valueTrasactionProcessor = new ValueTransactionProcessor(transactionRepository,
-                addressTransactionRepository);
+nodeBlock.NodeTransactions = new List<NodeTransaction>();
+
+foreach (var _hash in block.TransactionHashes)
+{
+  await CheckandFillTransactionAsync(_hash, block.Timestamp.Value);
+}
+try
+{
+  repositoryBase.Commit();
+}
 ```
 
-The ContractCreationTransactionProcessor has the option to Enabled or Disable the VM processing. Even if using Geth VM processing is rather slow.
+### Token Transfer Processing
+After every transaction process, it gets transcation logs from network. If log is a token transfer type log, it decodes this data using Nethereum and saves to DB.
 
-A top level transaction processor orchastrates the acess to the granular implementations:
-
-```csharp
-  var transactionProcessor = new TransactionProcessor(_web3, contractTransactionProcessor,
-                valueTrasactionProcessor, contractCreationTransactionProcessor);
-```
-
-The transaction processor has the also the option to enable or disable each one the specific transaction processors.
-
-### Blockchain processor
-
-Finally the blockchain processor is configured with the blockchain repository and transaction processor.
-In this example we disable the vm processing beforehand.
 
 ```csharp
-    transactionProcessor.ContractTransactionProcessor.EnabledVmProcessing = false;
-    _procesor = new BlockProcessor(_web3, blockRepository, transactionProcessor);
-```
-
-This can be complemented for performance with the Blockchain post processor. This preconfigured implementation only processes the VM and the contract transactions. 
-
-```csharp
- _procesor = new BlockVmPostProcessor(_web3, blockRepository, transactionProcessor);
- ```
-
-## Execution
-Finally after configuration we can execute the processing blocks as follows
-
-```csharp
-  while (startBlock <= endBlock)
+var _txlogs = transactionReceipt.Logs.ToObject<List<TransactionLog>>();
+foreach (var _log in _txlogs)
+{
+  try
   {
-    await _procesor.ProcessBlockAsync(startBlock).ConfigureAwait(false);
-    startBlock = startBlock + 1;           
+    if (_log.topics.First() != TransferEventKeccak)
+      continue;
+    if (_log.topics.Length < 3)
+      continue;
+
+    transaction.NodeTokenTransfers.Add(new NodeTokenTransfer()
+    {
+      Amount = new Helpers().HextoString(_log.data), 
+      From = new AddressType().Decode<string>(_log.topics[1]),
+      To = new AddressType().Decode<string>(_log.topics[2]),
+      TokenContractAddress = transactionSource.To
+    });
+    _order++;
   }
+}
 ```

@@ -13,31 +13,35 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using Nethereum.Hex.HexConvertors.Extensions;
+using Nethereum.ABI;
 
 namespace Nethereum.BlockChainStore.Data.Processors
 {
   public class TransactionsProcessor
   {
     private readonly IRepository<NodeTransaction> transactionRepository;
+    private readonly IRepository<NodeBlock> blockRepository;
     private Web3.Web3 web3;
     private IUnitOfWork repositoryBase;
-    private NodeTransaction transaction;
-    private string TransferEventKeccak = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+    private NodeBlock nodeBlock;
+    private string TransferEventKeccak = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"; //keccak of transfer event
 
     public TransactionsProcessor(Web3.Web3 web3, IUnitOfWork _repositoryBase)
     {
       this.web3 = web3;
       this.repositoryBase = _repositoryBase;
       transactionRepository = _repositoryBase.GetRepository<NodeTransaction>();
+      blockRepository = _repositoryBase.GetRepository<NodeBlock>();
     }
 
     public virtual async Task ProcessTransactionAsync(BlockWithTransactionHashes block)
     {
+      nodeBlock = blockRepository.Get(x => x.BlockNumber == block.Number.Value).FirstOrDefault();
 
-      var txs = transactionRepository.Get(x => x.BlockNumber == (int)block.Number.Value).FirstOrDefault();
-
-      if (txs != null) // eğer bu bloka ait transaction varsa içerde atlıyoruz
+      if (nodeBlock?.NodeTransactions != null) 
         return;
+
+      nodeBlock.NodeTransactions = new List<NodeTransaction>();
 
       foreach (var _hash in block.TransactionHashes)
       {
@@ -49,7 +53,7 @@ namespace Nethereum.BlockChainStore.Data.Processors
       }
       catch (Exception e)
       {
-        new Helpers().AddLog(LogType.Failure, $"Blok-{block.Number.Value} Transactions DB Yazma Hatası => " + e.InnerException);
+        new Helpers().AddLog(LogType.Failure, $"Block-{block.Number.Value} Transactions DB Write Error => " + e.InnerException);
       }
     }
 
@@ -57,51 +61,37 @@ namespace Nethereum.BlockChainStore.Data.Processors
     {
       var transactionSource = await web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(hash);
 
-      if (string.IsNullOrEmpty(transactionSource.To))
-        return;
-      if (transactionSource.Value.Value <= 0)
-        return;
-
       var transactionReceipt = await web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(hash).ConfigureAwait(false);
 
-      transaction = new NodeTransaction
-      {
-        NodeTransactionDetails = new List<NodeTransactionDetail>()
-      };
-
-      new Helpers().AddLog(LogType.Process, $"Blok-{transactionSource.BlockNumber.Value} Tx-{hash} Bulundu, İşleme Alınıyor");
-
+      new Helpers().AddLog(LogType.Process, $"Block-{transactionSource.BlockNumber.Value} Tx-{hash} Found, Processing");
+      var transaction = new NodeTransaction();
       try
       {
-        transaction.BlockNumber = (int)transactionSource.BlockNumber.Value;
-        transaction.BlockOrderNo = (int)transactionReceipt.TransactionIndex.Value;
-        transaction.ContractAddress = transactionSource.To;
-        transaction.Hash = transactionSource.TransactionHash;
-        transaction.Status = (OpsICO.Core.Enums.TransactionStatus)((int)transactionReceipt.Status.Value);
-        transaction.TxTime = new Helpers().UnixTimeStampToDateTime((double)blocktime);
-        transaction.WalletAddress = transactionSource.From;
 
-        transaction.NodeTransactionDetails.Add(new NodeTransactionDetail()
+        transaction = new NodeTransaction
         {
-          Amount = new UnitConversion().FromWei(transactionSource.Value.Value),
-          OrderNo = 0,
-          TransactionDirection = OpsICO.Core.Enums.TransactionDirection.ToContract
-        });
+          NodeTokenTransfers = new List<NodeTokenTransfer>(),
+          From = transactionSource.From,
+          To = transactionSource.To,
+          Status = (OpsICO.Core.Enums.TransactionStatus)((int)transactionReceipt.Status.Value),
+          TxHash = transactionSource.TransactionHash,
+          Value = new UnitConversion().FromWei(transactionSource.Value.Value)
+        };
 
       }
       catch (Exception e)
       {
-        new Helpers().AddLog(LogType.Failure, $"Blok-{transactionSource.BlockNumber.Value} Tx-{hash} Entity Yazma Hatası => " + e.InnerException);
+        new Helpers().AddLog(LogType.Failure, $"Block-{transactionSource.BlockNumber.Value} Tx-{hash} Entity Create Error => " + e.InnerException);
       }
 
-      new Helpers().AddLog(LogType.Process, $"Blok-{transactionSource.BlockNumber.Value} Tx-{hash} Loglar İşleme Alınıyor..");
-      ProcessTransactionLogs(transactionReceipt, blocktime);
-      new Helpers().AddLog(LogType.Success, $"Blok-{transactionSource.BlockNumber.Value} Tx-{hash} Loglar İşleme Alındı.");
+      new Helpers().AddLog(LogType.Process, $"Block-{transactionSource.BlockNumber.Value} Tx-{hash} Logs Processing");
+      ProcessTransactionLogs(transactionSource, transactionReceipt, blocktime, ref transaction);
+      new Helpers().AddLog(LogType.Success, $"Block-{transactionSource.BlockNumber.Value} Tx-{hash} Logs Processed");
 
-      transactionRepository.Add(transaction);
+      nodeBlock.NodeTransactions.Add(transaction);
     }
 
-    private void ProcessTransactionLogs(TransactionReceipt transactionReceipt, BigInteger blocktime)
+    private void ProcessTransactionLogs(Transaction transactionSource, TransactionReceipt transactionReceipt, BigInteger blocktime, ref NodeTransaction transaction)
     {
       if (!transactionReceipt.Logs.HasValues)
         return;
@@ -117,17 +107,18 @@ namespace Nethereum.BlockChainStore.Data.Processors
           if (_log.topics.Length < 3)
             continue;
 
-          transaction.NodeTransactionDetails.Add(new NodeTransactionDetail()
+          transaction.NodeTokenTransfers.Add(new NodeTokenTransfer()
           {
-            Amount = new Helpers().HextoDecimal(_log.data, 18), //emre buraya bak
-            OrderNo = _order,
-            TransactionDirection = OpsICO.Core.Enums.TransactionDirection.FromContract
+            Amount = new Helpers().HextoString(_log.data),
+            From = new AddressType().Decode<string>(_log.topics[1]),
+            To = new AddressType().Decode<string>(_log.topics[2]),
+            TokenContractAddress = transactionSource.To
           });
           _order++;
         }
         catch (Exception e)
         {
-          new Helpers().AddLog(LogType.Failure, $"Blok-{transactionReceipt.BlockNumber.Value} Tx-{transactionReceipt.TransactionHash} Log Yazma Hatası => " + e.InnerException);
+          new Helpers().AddLog(LogType.Failure, $"Block-{transactionReceipt.BlockNumber.Value} Tx-{transactionReceipt.TransactionHash} Log Entity Create Error => " + e.InnerException);
         }
       }
     }

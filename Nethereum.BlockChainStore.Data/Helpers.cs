@@ -15,17 +15,16 @@ namespace Nethereum.BlockChainStore.Data
 
     public DateTime UnixTimeStampToDateTime(double unixTimeStamp)
     {
-      // Unix timestamp is seconds past epoch
       System.DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
       dtDateTime = dtDateTime.AddSeconds(unixTimeStamp);
       return dtDateTime;
     }
 
-    public decimal HextoDecimal(string hex, int decimalPlace)
+    public string HextoDecimal(string hex, int decimalPlace)
     {
       var c = BigInteger.Parse(hex.RemoveHexPrefix(), System.Globalization.NumberStyles.HexNumber).ToString();
-      var s = Convert.ToDecimal(c.Substring(0, c.Length - decimalPlace) + "," + c.Substring(c.Length - decimalPlace, decimalPlace));
-      return s;
+      //var s = Convert.ToDecimal(c.Substring(0, c.Length - decimalPlace) + "," + c.Substring(c.Length - decimalPlace, decimalPlace));
+      return c;
     }
   }
 
