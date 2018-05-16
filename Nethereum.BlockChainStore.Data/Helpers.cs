@@ -20,10 +20,9 @@ namespace Nethereum.BlockChainStore.Data
       return dtDateTime;
     }
 
-    public string HextoDecimal(string hex, int decimalPlace)
+    public string HextoString(string hex)
     {
       var c = BigInteger.Parse(hex.RemoveHexPrefix(), System.Globalization.NumberStyles.HexNumber).ToString();
-      //var s = Convert.ToDecimal(c.Substring(0, c.Length - decimalPlace) + "," + c.Substring(c.Length - decimalPlace, decimalPlace));
       return c;
     }
   }
